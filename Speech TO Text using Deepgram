@@ -1,0 +1,294 @@
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+#include "driver/i2s.h"
+#include "WiFi.h"
+#include "WebServer.h"
+#include <WiFiClientSecure.h>
+
+// Wi-Fi credentials
+const char* ssid = "KUNAL 9531";
+const char* password = "kunal@95105";
+
+// Deepgram API key
+const char* deepgramApiKey = "8fdf4c6a06ca3df01d40b66d6a2b5eb8dac2af14";
+
+// Web server on port 80
+WebServer server(80);
+WiFiClientSecure client;
+
+// I2S configuration
+#define I2S_WS 25 // Word select pin (LRCLK)
+#define I2S_SD 26 // Serial data pin
+#define I2S_SCK 27 // Serial clock pin (BCLK)
+#define SD_CS 5 // SD card CS pin
+
+#define SAMPLE_RATE 8000 // Sample rate
+#define I2S_NUM I2S_NUM_0 // I2S peripheral number
+
+const char* audio_filename = "/recording.mp3"; // Audio file path on SD card
+
+// Global variable to keep track of recording status
+bool isRecording = false;
+String recordingStatus = "Idle";
+
+void writeWAVHeader(File file, int sampleRate, int bitsPerSample, int channels, int dataSize) {
+file.write((const uint8_t*)"RIFF", 4);
+uint32_t fileSize = dataSize + 36;
+file.write((const uint8_t*)&fileSize, 4);
+file.write((const uint8_t*)"WAVE", 4);
+file.write((const uint8_t*)"fmt ", 4);
+uint32_t subchunk1Size = 16; // PCM
+file.write((const uint8_t*)&subchunk1Size, 4);
+uint16_t audioFormat = 1; // PCM
+file.write((const uint8_t*)&audioFormat, 2);
+file.write((const uint8_t*)&channels, 2);
+file.write((const uint8_t*)&sampleRate, 4);
+uint32_t byteRate = sampleRate * channels * (bitsPerSample / 8);
+file.write((const uint8_t*)&byteRate, 4);
+uint16_t blockAlign = channels * (bitsPerSample / 8);
+file.write((const uint8_t*)&blockAlign, 2);
+file.write((const uint8_t*)&bitsPerSample, 2);
+file.write((const uint8_t*)"data", 4);
+file.write((const uint8_t*)&dataSize, 4);
+}
+
+void setupI2S() {
+i2s_config_t i2s_config = {
+.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+.sample_rate = SAMPLE_RATE,
+.bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+.communication_format = I2S_COMM_FORMAT_I2S_MSB,
+.intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+.dma_buf_count = 8,
+.dma_buf_len = 1024,
+.use_apll = false,
+.tx_desc_auto_clear = false,
+.fixed_mclk = 0
+};
+
+i2s_pin_config_t pin_config = {
+.bck_io_num = I2S_SCK,
+.ws_io_num = I2S_WS,
+.data_out_num = -1,
+.data_in_num = I2S_SD
+};
+
+i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL);
+i2s_set_pin(I2S_NUM, &pin_config);
+}
+
+void recordAudio(const char* filename) {
+File audioFile = SD.open(filename, FILE_WRITE);
+
+if (!audioFile) {
+Serial.println("Failed to open file for writing!");
+return;
+}
+
+Serial.println("Recording audio...");
+
+const int recordTime = 5; // Record for 5 seconds
+const int bufferSize = 1024;
+uint8_t buffer[bufferSize];
+int totalBytesWritten = 0;
+
+writeWAVHeader(audioFile, SAMPLE_RATE, 16, 1, 0); // Temporary WAV header
+
+uint32_t startMillis = millis();
+uint32_t elapsedMillis = 0;
+while (elapsedMillis < recordTime * 1000) {
+size_t bytesRead;
+if (i2s_read(I2S_NUM, buffer, bufferSize, &bytesRead, 0) == ESP_OK) {
+audioFile.write(buffer, bytesRead);
+totalBytesWritten += bytesRead;
+}
+server.handleClient(); // Handle web server requests during recording
+elapsedMillis = millis() - startMillis;
+}
+
+// Update WAV header with actual data size
+audioFile.seek(0);
+writeWAVHeader(audioFile, SAMPLE_RATE, 16, 1, totalBytesWritten);
+audioFile.close();
+
+recordingStatus = "Idle";
+Serial.println("Recording saved as /recording.mp3");
+}
+
+void handleRoot() {
+String html = "
+
+ESP32 Web Server
+";
+html += "
+Status: " + recordingStatus + "
+
+";
+if (isRecording) {
+html += "
+
+Recording...
+
+";
+} else {
+html += "
+Download Audio
+
+";
+html += "
+<button onclick="startRecording()">Start Recording
+
+";
+html += "
+<button onclick="transcribeAudio()">Transcribe Audio
+
+";
+}
+html += R"rawliteral(
+<script>
+async function startRecording() {
+const response = await fetch('/start-recording');
+const result = await response.text();
+alert(result);
+setTimeout(function() {
+location.reload();
+}, 1000);
+}
+
+  async function transcribeAudio() {
+    const response = await fetch('/transcribe-audio');
+    const result = await response.text();
+    alert(result);
+  }
+</script>
+)rawliteral";
+
+server.send(200, "text/html", html);
+}
+
+void handleAudio() {
+File audioFile = SD.open(audio_filename);
+if (!audioFile) {
+server.send(404, "text/plain", "File not found!");
+return;
+}
+server.streamFile(audioFile, "audio/mp3");
+audioFile.close();
+}
+
+void transcribeAudio() {
+File audioFile = SD.open(audio_filename);
+if (!audioFile) {
+server.send(404, "text/plain", "Audio file not found!");
+return;
+}
+
+size_t audio_size = audioFile.size();
+audioFile.close();
+
+client.setInsecure();
+if (!client.connect("api.deepgram.com", 443)) {
+server.send(500, "text/plain", "Failed to connect to Deepgram API!");
+return;
+}
+
+client.println("POST /v1/listen?model=nova-2-general&language=en-IN&sample_rate=8000 HTTP/1.1");
+client.println("Host: api.deepgram.com");
+client.println("Authorization: Token " + String(deepgramApiKey));
+client.println("Content-Type: audio/mp3");
+client.println("Content-Length: " + String(audio_size));
+client.println();
+
+// Send audio file
+File file = SD.open(audio_filename, FILE_READ);
+const size_t bufferSize = 1024;
+uint8_t buffer[bufferSize];
+size_t bytesRead;
+while (file.available()) {
+bytesRead = file.read(buffer, sizeof(buffer));
+if (bytesRead > 0) client.write(buffer, bytesRead);
+}
+file.close();
+
+// Read response
+String response = "";
+while (client.connected() || client.available()) {
+if (client.available()) {
+char c = client.read();
+response += c;
+}
+}
+client.stop();
+
+// Extract "transcript" field from the JSON response
+int startIndex = response.indexOf(""transcript":"") + 13;
+int endIndex = response.indexOf("",", startIndex);
+String transcript = "";
+if (startIndex > 12 && endIndex > startIndex) {
+transcript = response.substring(startIndex, endIndex);
+} else {
+transcript = "Transcription failed. Check API response.";
+}
+
+server.send(200, "text/plain", transcript); // Send the transcript to the browser
+Serial.println("Transcription: " + transcript); // Log it to Serial Monitor
+}
+
+void startRecording() {
+if (isRecording) {
+server.send(400, "text/plain", "Already recording!");
+return;
+}
+
+isRecording = true;
+recordingStatus = "Recording...";
+server.send(200, "text/plain", "Recording started...");
+
+recordAudio(audio_filename);
+
+isRecording = false;
+recordingStatus = "Idle";
+
+// Reset I2S after recording
+i2s_driver_uninstall(I2S_NUM);
+setupI2S();
+}
+
+void setup() {
+Serial.begin(115200);
+
+// Initialize Wi-Fi
+WiFi.begin(ssid, password);
+Serial.print("Connecting to Wi-Fi");
+while (WiFi.status() != WL_CONNECTED) {
+delay(1000);
+Serial.print(".");
+}
+Serial.println("\nConnected to Wi-Fi!");
+Serial.println(WiFi.localIP());
+
+// Initialize SD card
+if (!SD.begin(SD_CS)) {
+Serial.println("Failed to initialize SD card!");
+return;
+}
+Serial.println("SD card initialized.");
+
+// Initialize I2S
+setupI2S();
+Serial.println("I2S initialized.");
+
+// Set up web server
+server.on("/", handleRoot);
+server.on("/audio", handleAudio);
+server.on("/start-recording", startRecording);
+server.on("/transcribe-audio", transcribeAudio);
+server.begin();
+Serial.println("Web server started!");
+}
+
+void loop() {
+server.handleClient();
+}
