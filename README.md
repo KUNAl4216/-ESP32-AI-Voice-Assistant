@@ -1,21 +1,6 @@
-It looks like GitHub isn't rendering your **README.md** file properly, possibly because of formatting issues. Here’s what you need to do to fix it:
 
-### **Common Problems & Fixes**
-1. **Missing Line Breaks & Proper Markdown Syntax**
-   - GitHub uses **Markdown formatting**, so you need to add **line breaks** and proper syntax like `##`, `###`, `**bold**`, and `-` for lists.
 
-2. **Code Block Formatting**
-   - Wrap your code snippets with triple backticks (` ``` `) for proper formatting.
 
-3. **Mermaid Diagram Fix**
-   - Use **correct Mermaid syntax** for rendering the workflow diagram.
-
----
-
-### **Fixed README.md**
-Here’s a properly formatted version of your **README.md**:
-
-```md
 # ESP32 Real-Time Speech-to-Text and Text-to-Speech System with SD Card Support  
 
 This project utilizes the **ESP32** to enable **real-time Text-to-Speech (TTS)** and **Speech-to-Text (STT)** functionalities using **Deepgram** and **Gemini APIs**.  
