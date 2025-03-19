@@ -2,9 +2,9 @@
 #include <HTTPClient.h>
 #include <WebServer.h>
 #define LED_BUILTIN 2
-const char* ssid = "KUNAL 9531";
-const char* password = "kunal@95105";
-const char* Gemini_Token = "AIzaSyBD_lPw8IbkfhAaTk6IWusTrLLT_VSxShs";
+const char* ssid = "ssid";
+const char* password = "password";
+const char* Gemini_Token = "Gemini_Token";
 const char* Gemini_Max_Tokens = "500";
 
 String res = ""; // To store the current question
