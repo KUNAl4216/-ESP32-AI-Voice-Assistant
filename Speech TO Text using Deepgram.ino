@@ -7,11 +7,11 @@
 #include <WiFiClientSecure.h>
 
 // Wi-Fi credentials
-const char* ssid = "KUNAL 9531";
-const char* password = "kunal@95105";
+const char* ssid = "ssid";
+const char* password = "password";
 
 // Deepgram API key
-const char* deepgramApiKey = "8fdf4c6a06ca3df01d40b66d6a2b5eb8dac2af14";
+const char* deepgramApiKey = "deepgramApiKey";
 
 // Web server on port 80
 WebServer server(80);
