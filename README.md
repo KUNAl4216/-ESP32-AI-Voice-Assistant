@@ -1,6 +1,7 @@
 ESP32 Real-Time Speech-to-Text and Text-to-Speech System with SD Card Support
 This project utilizes the ESP32 to enable real-time Text-to-Speech (TTS) and Speech-to-Text (STT) functionalities using Deepgram and gemini APIs. Additionally, it supports SD card storage, allowing voice recordings and conversation logs to be saved for future playback or analysis.
 
+
 🚀 Features
 ✅ Real-time Speech-to-Text (STT): Converts voice into text using Deepgram API.
 ✅ gemini Integration: Processes user input and generates intelligent responses.
@@ -10,6 +11,7 @@ This project utilizes the ESP32 to enable real-time Text-to-Speech (TTS) and Spe
 ✅ SD Card Storage: Saves voice recordings and conversation logs.
 ✅ Low Latency: Ensures fast response times for real-time conversations.
 
+
 🛠️ Hardware Requirements
 ESP32 microcontroller
 Microphone module (for capturing audio input)
@@ -17,6 +19,7 @@ Speaker (for playing audio output)
 MicroSD Card Module (SPI-based for storage)
 MicroSD Card (FAT32 format, min 8GB recommended)
 Power source (USB or battery)
+
 🔧 Software Requirements
 Arduino IDE or PlatformIO
 ESP32 Board Package
@@ -24,13 +27,13 @@ Deepgram API Key (for Speech-to-Text)
 OpenAI API Key (for gemini processing)
 WiFi Credentials (SSID & Password)
 SD Card Library for ESP32
+
+
 📌 Installation & Setup
 1️⃣ Clone the Repository
-sh
-Copy
-Edit
-git clone https://github.com/KUNAl4216/-ESP32-AI-Voice-Assistant.git
-cd ESP32-AI-Voice-Assistant
+git clone https://github.com/KUNAl4216/ESP32-AI-Voice-Assistant.git
+Cd project
+
 2️⃣ Install Dependencies
 Ensure you have installed the following libraries in Arduino IDE or PlatformIO:
 
@@ -38,22 +41,22 @@ ESP32_SD.h (For SD card functionality)
 SPI.h (For SD card SPI communication)
 WiFi.h (For internet connectivity)
 3️⃣ Configure API Keys & SD Card
+
+
 Modify the config.h file and add your credentials:
 
-cpp
-Copy
-Edit
 #define WIFI_SSID "YourWiFiName"
 #define WIFI_PASSWORD "YourWiFiPassword"
 #define DEEPGRAM_API_KEY "YourDeepgramAPIKey"
 #define OPENAI_API_KEY "YourOpenAIAPIKey"
-
 // Define SD Card CS pin
 #define SD_CS 5  // Change to your actual SD card module's CS pin
+
 4️⃣ Upload Code to ESP32
 Connect your ESP32 via USB.
 Select the correct COM port in Arduino IDE or PlatformIO.
 Compile & upload the code.
+
 📡 How It Works (Now With SD Card Storage)
 1️⃣ Voice input is captured by the microphone.
 2️⃣ The audio is saved to the SD card for later playback.
@@ -63,10 +66,9 @@ Compile & upload the code.
 6️⃣ The generated voice output is saved on the SD card.
 7️⃣ The ESP32 plays the generated audio through the speaker.
 
+
 🖼️ Project Workflow
-mermaid
-Copy
-Edit
+
 graph TD;
     User-->|Speaks|ESP32_Mic;
     ESP32_Mic-->SD_Card(Save Recording);
@@ -76,18 +78,18 @@ graph TD;
     Deepgram_TTS-->SD_Card(Save TTS Output);
     SD_Card-->ESP32_Speaker;
     ESP32_Speaker-->User;
+
 📂 SD Card File Storage
 File Name	Description
 recording_x.wav	Stores recorded user speech (raw audio)
 response_x.wav	Stores gemini-generated speech (TTS output)
 conversation_log.txt	Logs full conversation (text format)
+
 📌 Future Enhancements
 ✅ Improve storage efficiency with compressed audio formats
 ✅ Implement real-time playback from SD card
 ✅ Add voice recognition to identify different users
 ✅ Support offline Speech-to-Text & Text-to-Speech models
 
-📜 License
-This project is open-source and available under the MIT License.
 
-🚀🎙️ Happy Coding!
+
