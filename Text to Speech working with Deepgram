@@ -6,8 +6,8 @@
 #include <WiFiClientSecure.h>
 
 // Wi-Fi credentials
-const char* ssid = "KUNAL 9531";
-const char* password = "kunal@95105";
+const char* ssid = "Your_WIFI_NAME";
+const char* password = "Your_WIFI_PASSWORD";
 
 // Deepgram API key
 const char* deepgramApiKey = "Your_API_KEY";
